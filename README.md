@@ -3,24 +3,28 @@
 An all-local sandbox server for iOS training, acting as a simple SNS backend. Built with Vapor 4 and Swift 5.9+, no Docker or Node required. The API and a minimal admin web UI are served from the same origin.
 
 ## Requirements
+
 - macOS 13+
 - Xcode 15 / Swift 5.9+
 - Vapor 4 (resolved via SwiftPM)
 
 ## Getting Started
+
 - Run server: `make dev` (binds to 127.0.0.1:8080)
 - Apply seed: `make seed` (copies `Resources/seed.json` to `db.json`)
 - Reset DB: `make reset` (empties posts and keeps user "me")
 
-Admin UI: http://127.0.0.1:8080/admin
+Admin UI: <http://127.0.0.1:8080/admin>
 
 Health check: `GET /health` → `{"ok":true}`
 
 Note for iOS simulator/device: always use `127.0.0.1:8080` as the base URL. Depending on environment, `localhost` may not resolve to the host interface seen by the simulator.
 
 ## API Summary (Base URL: http://127.0.0.1:8080)
+
 Common error payload:
-```
+
+```json
 { "code": "RATE_LIMIT" | "SERVER_ERROR" | "NOT_FOUND" | "BAD_REQUEST", "message": "human readable message" }
 ```
 
@@ -36,7 +40,8 @@ Common error payload:
 - `PATCH /api/users/me` → update displayName and avatarUrl
 
 Examples (curl):
-```
+
+```sh
 curl -s http://127.0.0.1:8080/health
 curl -s http://127.0.0.1:8080/api/posts?page=1
 curl -s -X POST http://127.0.0.1:8080/api/posts \
@@ -46,6 +51,7 @@ curl -s -X POST http://127.0.0.1:8080/api/posts/p_1/like
 ```
 
 ## Admin Web (/admin)
+
 - Seed apply: `POST /admin/seed`
 - DB reset: `POST /admin/reset`
 - Fault injection: `POST /admin/faults` → `{ latencyMs:0..2000, rateLimit:bool, errorRate:0..100 }`
@@ -54,6 +60,7 @@ curl -s -X POST http://127.0.0.1:8080/api/posts/p_1/like
 Fault injection applies to all `/api/*` requests.
 
 ## Implementation Notes
+
 - JSON uses camelCase; dates use ISO8601 (Z).
 - Pagination: descending by `createdAt`, 20 items per page.
 - `likedByMe` assumes a fixed local user "me".
@@ -61,8 +68,10 @@ Fault injection applies to all `/api/*` requests.
 - Logging: one-line method/path/status/latency for `/api/*`; admin setting changes are also logged.
 
 ## Known Limitations
+
 - Authentication, notifications, following are out of scope.
 - CORS is disabled; same-origin only.
 
 ## Tests
+
 Run `swift test` to verify timeline paging and fault injection basics.
