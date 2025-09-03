@@ -34,7 +34,7 @@ final class AdminController: RouteCollection {
         guard let b = try? req.content.decode(FaultsReq.self) else {
             return req.eventLoop.makeSucceededFuture(FaultInjectionMiddleware.errorResponse(req: req, status: .badRequest, code: "BAD_REQUEST", message: "Invalid JSON"))
         }
-        guard b.latencyMs >= 0 && b.latencyMs <= 2000 && b.errorRate >= 0 && b.errorRate <= 100 else {
+        guard b.latencyMs >= 0 && b.latencyMs <= 2_000 && b.errorRate >= 0 && b.errorRate <= 100 else {
             return req.eventLoop.makeSucceededFuture(FaultInjectionMiddleware.errorResponse(req: req, status: .badRequest, code: "BAD_REQUEST", message: "invalid fault values"))
         }
         let state = FaultState(latencyMs: b.latencyMs, rateLimit: b.rateLimit, errorRate: b.errorRate)

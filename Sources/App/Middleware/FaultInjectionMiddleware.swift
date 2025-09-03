@@ -1,5 +1,5 @@
-import Vapor
 import NIO
+import Vapor
 
 /// Mutable fault injection state.
 struct FaultState: Content {
@@ -70,12 +70,12 @@ final class FaultInjectionMiddleware: Middleware {
     }
 
     private func log(req: Request, status: HTTPResponseStatus, start: Date) {
-        let ms = Int(Date().timeIntervalSince(start) * 1000)
+        let ms = Int(Date().timeIntervalSince(start) * 1_000)
         req.logger.info("[API] \(req.method.string) \(req.url.path) -> \(status.code) (\(ms)ms)")
     }
 
     /// Build a uniform API error JSON response.
-    static func errorResponse(req: Request, status: HTTPResponseStatus, code: String, message: String) -> Response {
+    static func errorResponse(req _: Request, status: HTTPResponseStatus, code: String, message: String) -> Response {
         struct APIError: Content { let code: String; let message: String }
         let payload = APIError(code: code, message: message)
         let res = Response(status: status)

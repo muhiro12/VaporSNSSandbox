@@ -1,9 +1,9 @@
-import XCTVapor
 @testable import App
+import XCTVapor
 
 /// Basic tests for timeline paging and fault injection behavior.
 final class TimelineTests: XCTestCase {
-    func makeAppWithDB(posts: Int = 35) throws -> Application {
+    private func makeAppWithDB(posts: Int = 35) throws -> Application {
         // Use in-memory DB to avoid filesystem writes
         FileDB.shared = FileDB(inMemory: true)
         // Seed minimal users

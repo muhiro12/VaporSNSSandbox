@@ -7,7 +7,7 @@ public func configure(_ app: Application) throws {
 
     // HTTP server binding
     app.http.server.configuration.hostname = "127.0.0.1"
-    app.http.server.configuration.port = 8080
+    app.http.server.configuration.port = 8_080
 
     // JSON encoding/decoding strategy
     ContentConfiguration.global.use(encoder: {

@@ -1,5 +1,5 @@
-import Vapor
 import Foundation
+import Vapor
 
 /// Very small file-backed store for users and posts.
 /// Holds in-memory arrays and flushes to `db.json`.
@@ -100,7 +100,7 @@ final class FileDB {
             if !self.users.contains(where: { $0.id == "me" }) {
                 self.users.insert(User(id: "me", displayName: "Trainee", avatarUrl: nil), at: 0)
             }
-            self.posts = snap.posts.sorted(by: { $0.createdAt > $1.createdAt })
+            self.posts = snap.posts.sorted { $0.createdAt > $1.createdAt }
             saveLocked()
         }
     }
@@ -127,7 +127,7 @@ final class FileDB {
     func nextPostID() -> String {
         queue.sync {
             let maxNum: Int = posts.compactMap { p in
-                if p.id.hasPrefix("p_") { return Int(p.id.dropFirst(2)) } else { return nil }
+                if p.id.hasPrefix("p_") { return Int(p.id.dropFirst(2)) }return nil
             }.max() ?? 0
             return "p_\(maxNum + 1)"
         }
