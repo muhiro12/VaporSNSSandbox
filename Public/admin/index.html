@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>VaporSNS Admin</title>
+    <link rel="stylesheet" href="/admin/style.css" />
+  </head>
+  <body>
+    <header>
+      <h1>VaporSNS Admin</h1>
+      <nav>
+        <button id="btn-seed">Seed投入</button>
+        <button id="btn-reset">DBリセット</button>
+      </nav>
+    </header>
+
+    <section class="panel">
+      <h2>故障注入</h2>
+      <div class="grid">
+        <label>Latency(ms)<input id="latency" type="number" min="0" max="2000" value="0" /></label>
+        <label>ErrorRate(%)<input id="errorRate" type="number" min="0" max="100" value="0" /></label>
+        <label>RateLimit(429)<input id="rateLimit" type="checkbox" /></label>
+      </div>
+      <button id="btn-apply-faults">適用</button>
+      <span id="faults-status"></span>
+    </section>
+
+    <section class="panel">
+      <h2>他ユーザーとして投稿</h2>
+      <div class="grid">
+        <label>authorId<input id="spawn-author" placeholder="u_1" /></label>
+        <label>text<input id="spawn-text" maxlength="140" placeholder="Hello from admin" /></label>
+        <label>imageUrl<input id="spawn-image" placeholder="https://..." /></label>
+      </div>
+      <button id="btn-spawn">投稿</button>
+      <span id="spawn-status"></span>
+    </section>
+
+    <section class="panel">
+      <h2>直近の投稿</h2>
+      <label>件数<input id="limit" type="number" min="1" max="100" value="20"/></label>
+      <button id="btn-refresh">更新</button>
+      <ul id="posts"></ul>
+    </section>
+
+    <script src="/admin/app.js"></script>
+  </body>
+  </html>
+
