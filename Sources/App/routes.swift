@@ -2,7 +2,9 @@ import Vapor
 
 /// Register all application routes.
 func routes(_ app: Application) throws {
-    app.get("health") { _ -> [String: Bool] in ["ok": true] }
+    app.get("health") { _ -> [String: Bool] in
+        ["ok": true]
+    }
 
     try app.register(collection: PostsController())
     try app.register(collection: UsersController())
@@ -10,8 +12,8 @@ func routes(_ app: Application) throws {
 
     // Redirect /admin -> /admin/index.html for convenience
     app.get("admin") { _ -> Response in
-        let res = Response(status: .seeOther)
-        res.headers.replaceOrAdd(name: .location, value: "/admin/index.html")
-        return res
+        let response = Response(status: .seeOther)
+        response.headers.replaceOrAdd(name: .location, value: "/admin/index.html")
+        return response
     }
 }

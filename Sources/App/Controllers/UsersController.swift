@@ -32,14 +32,14 @@ final class UsersController: RouteCollection {
         me.displayName = body.displayName
         me.avatarUrl = body.avatarUrl
         FileDB.shared.upsertUser(me)
-        let res = Response(status: .ok)
+        let response = Response(status: .ok)
         do {
-            res.headers.contentType = .json
+            response.headers.contentType = .json
             let data = try JSONEncoder().encode(me)
-            res.body = .init(data: data)
+            response.body = .init(data: data)
         } catch {
             return req.eventLoop.makeSucceededFuture(FaultInjectionMiddleware.errorResponse(req: req, status: .internalServerError, code: "SERVER_ERROR", message: "encoding failed"))
         }
-        return req.eventLoop.makeSucceededFuture(res)
+        return req.eventLoop.makeSucceededFuture(response)
     }
 }

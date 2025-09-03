@@ -20,12 +20,10 @@ final class FileDB {
     ///   - path: Optional custom path for the backing JSON file.
     ///   - inMemory: If true, avoid persistent writes (for tests).
     init(path: String? = nil, inMemory: Bool = false) {
-        let wd = DirectoryConfiguration.detect().workingDirectory
-        if inMemory {
-            self.fileURL = URL(fileURLWithPath: wd).appendingPathComponent("/dev/null")
+        if let path, inMemory == false {
+            self.fileURL = URL(fileURLWithPath: path)
         } else {
-            let p = path ?? (wd + "db.json")
-            self.fileURL = URL(fileURLWithPath: p)
+            self.fileURL = AppConfig.databaseFileURL(inMemory: inMemory)
         }
         self.users = []
         self.posts = []
@@ -35,16 +33,15 @@ final class FileDB {
     func load(app: Application? = nil) {
         queue.sync {
             do {
-                let fm = FileManager.default
-                if fm.fileExists(atPath: fileURL.path) {
+                let fileManager = FileManager.default
+                if fileManager.fileExists(atPath: fileURL.path) {
                     let data = try Data(contentsOf: fileURL)
-                    let dec = JSONDecoder()
-                    dec.dateDecodingStrategy = .iso8601
-                    let snap = try dec.decode(Snapshot.self, from: data)
-                    self.users = snap.users
-                    self.posts = snap.posts
+                    let decoder = JSONDecoder()
+                    decoder.dateDecodingStrategy = .iso8601
+                    let snapshot = try decoder.decode(Snapshot.self, from: data)
+                    self.users = snapshot.users
+                    self.posts = snapshot.posts
                 } else {
-                    // Initialize with default "me" user
                     if !self.users.contains(where: { $0.id == "me" }) {
                         self.users.append(User(id: "me", displayName: "Trainee", avatarUrl: nil))
                     }
@@ -63,16 +60,14 @@ final class FileDB {
 
     private func saveLocked() {
         do {
-            let enc = JSONEncoder()
-            enc.dateEncodingStrategy = .iso8601
-            enc.outputFormatting = [.prettyPrinted, .sortedKeys]
-            let data = try enc.encode(Snapshot(users: users, posts: posts))
-            // If in-memory path looks invalid, skip write (useful in tests)
+            let encoder = JSONEncoder()
+            encoder.dateEncodingStrategy = .iso8601
+            encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+            let data = try encoder.encode(Snapshot(users: users, posts: posts))
             if fileURL.path.contains("/dev/null") == false {
                 try data.write(to: fileURL, options: .atomic)
             }
         } catch {
-            // Best-effort; log to stdout if app not available
             print("[FileDB] Save error: \(error)")
         }
     }
@@ -89,18 +84,19 @@ final class FileDB {
     /// Load seed JSON from a relative path and persist it.
     func seed(fromSeedPath path: String) throws {
         try queue.sync {
-            let wd = DirectoryConfiguration.detect().workingDirectory
-            let url = URL(fileURLWithPath: wd + path)
+            let workingDirectory = DirectoryConfiguration.detect().workingDirectory
+            let url = URL(fileURLWithPath: workingDirectory + path)
             let data = try Data(contentsOf: url)
-            let dec = JSONDecoder()
-            dec.dateDecodingStrategy = .iso8601
-            let snap = try dec.decode(Snapshot.self, from: data)
-            self.users = snap.users
-            // Ensure "me" exists
+            let decoder = JSONDecoder()
+            decoder.dateDecodingStrategy = .iso8601
+            let snapshot = try decoder.decode(Snapshot.self, from: data)
+            self.users = snapshot.users
             if !self.users.contains(where: { $0.id == "me" }) {
                 self.users.insert(User(id: "me", displayName: "Trainee", avatarUrl: nil), at: 0)
             }
-            self.posts = snap.posts.sorted { $0.createdAt > $1.createdAt }
+            self.posts = snapshot.posts.sorted { left, right in
+                left.createdAt > right.createdAt
+            }
             saveLocked()
         }
     }
@@ -114,8 +110,8 @@ final class FileDB {
     /// Insert or replace a user, then save.
     func upsertUser(_ user: User) {
         queue.sync {
-            if let idx = users.firstIndex(where: { $0.id == user.id }) {
-                users[idx] = user
+            if let index = users.firstIndex(where: { $0.id == user.id }) {
+                users[index] = user
             } else {
                 users.append(user)
             }
@@ -126,10 +122,13 @@ final class FileDB {
     /// Compute the next post ID as `p_<n+1>`.
     func nextPostID() -> String {
         queue.sync {
-            let maxNum: Int = posts.compactMap { p in
-                if p.id.hasPrefix("p_") { return Int(p.id.dropFirst(2)) }return nil
+            let maxNumber: Int = posts.compactMap { post in
+                if post.id.hasPrefix("p_") {
+                    return Int(post.id.dropFirst(2))
+                }
+                return nil
             }.max() ?? 0
-            return "p_\(maxNum + 1)"
+            return "p_\(maxNumber + 1)"
         }
     }
 
@@ -147,30 +146,34 @@ final class FileDB {
     /// Toggle like from local user "me" and save.
     func toggleLike(postID: String) -> Post? {
         queue.sync {
-            guard let idx = posts.firstIndex(where: { $0.id == postID }) else { return nil }
-            var p = posts[idx]
-            if p.likedByMe {
-                p.likedByMe = false
-                p.likeCount = max(0, p.likeCount - 1)
-            } else {
-                p.likedByMe = true
-                p.likeCount += 1
+            guard let index = posts.firstIndex(where: { $0.id == postID }) else {
+                return nil
             }
-            posts[idx] = p
+            var post = posts[index]
+            if post.likedByMe {
+                post.likedByMe = false
+                post.likeCount = max(0, post.likeCount - 1)
+            } else {
+                post.likedByMe = true
+                post.likeCount += 1
+            }
+            posts[index] = post
             saveLocked()
-            return p
+            return post
         }
     }
 
     /// Return a page of posts sorted by `createdAt` desc.
     func getPage(page: Int, pageSize: Int) -> PostsPage {
         queue.sync {
-            let sorted = posts.sorted { $0.createdAt > $1.createdAt }
-            let start = max(0, (page - 1) * pageSize)
-            let end = min(sorted.count, start + pageSize)
-            let slice = start < end ? Array(sorted[start..<end]) : []
-            let next = end < sorted.count ? page + 1 : nil
-            return PostsPage(items: slice, nextPage: next)
+            let sorted = posts.sorted { left, right in
+                left.createdAt > right.createdAt
+            }
+            let startIndex = max(0, (page - 1) * pageSize)
+            let endIndex = min(sorted.count, startIndex + pageSize)
+            let items = startIndex < endIndex ? Array(sorted[startIndex..<endIndex]) : []
+            let nextPage = endIndex < sorted.count ? page + 1 : nil
+            return PostsPage(items: items, nextPage: nextPage)
         }
     }
 }

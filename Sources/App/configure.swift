@@ -11,14 +11,14 @@ public func configure(_ app: Application) throws {
 
     // JSON encoding/decoding strategy
     ContentConfiguration.global.use(encoder: {
-        let enc = JSONEncoder()
-        enc.dateEncodingStrategy = .iso8601
-        return enc
+        let encoder = JSONEncoder()
+        encoder.dateEncodingStrategy = .iso8601
+        return encoder
     }(), for: .json)
     ContentConfiguration.global.use(decoder: {
-        let dec = JSONDecoder()
-        dec.dateDecodingStrategy = .iso8601
-        return dec
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .iso8601
+        return decoder
     }(), for: .json)
 
     // Middlewares

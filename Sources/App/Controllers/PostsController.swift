@@ -14,11 +14,14 @@ final class PostsController: RouteCollection {
     /// Returns a page of posts (descending by createdAt).
     private func getPosts(req: Request) throws -> EventLoopFuture<PostsPage> {
         let page = (try? req.query.get(Int.self, at: "page")) ?? 1
-        let pageObj = FileDB.shared.getPage(page: max(1, page), pageSize: pageSize)
-        return req.eventLoop.makeSucceededFuture(pageObj)
+        let postsPage = FileDB.shared.getPage(page: max(1, page), pageSize: pageSize)
+        return req.eventLoop.makeSucceededFuture(postsPage)
     }
 
-    struct CreatePostRequest: Content { let text: String; let imageUrl: String? }
+    struct CreatePostRequest: Content {
+        let text: String
+        let imageUrl: String?
+    }
 
     /// Creates a post as "me". Validates text length 1..140.
     private func createPost(req: Request) throws -> EventLoopFuture<Response> {
@@ -31,15 +34,16 @@ final class PostsController: RouteCollection {
         }
         let me = FileDB.shared.findUser(id: "me") ?? User(id: "me", displayName: "Trainee", avatarUrl: nil)
         let post = FileDB.shared.addPost(author: me, text: body.text, imageUrl: body.imageUrl)
-        let res = Response(status: .created)
+        let response = Response(status: .created)
         do {
-            res.headers.contentType = .json
-            let enc = JSONEncoder(); enc.dateEncodingStrategy = .iso8601
-            res.body = .init(data: try enc.encode(post))
+            response.headers.contentType = .json
+            let encoder = JSONEncoder()
+            encoder.dateEncodingStrategy = .iso8601
+            response.body = .init(data: try encoder.encode(post))
         } catch {
             return req.eventLoop.makeSucceededFuture(FaultInjectionMiddleware.errorResponse(req: req, status: .internalServerError, code: "SERVER_ERROR", message: "encoding failed"))
         }
-        return req.eventLoop.makeSucceededFuture(res)
+        return req.eventLoop.makeSucceededFuture(response)
     }
 
     /// Toggles like for a post by ID. Returns 404 if not found.
@@ -50,14 +54,15 @@ final class PostsController: RouteCollection {
         guard let updated = FileDB.shared.toggleLike(postID: id) else {
             return req.eventLoop.makeSucceededFuture(FaultInjectionMiddleware.errorResponse(req: req, status: .notFound, code: "NOT_FOUND", message: "post not found"))
         }
-        let res = Response(status: .ok)
+        let response = Response(status: .ok)
         do {
-            res.headers.contentType = .json
-            let enc = JSONEncoder(); enc.dateEncodingStrategy = .iso8601
-            res.body = .init(data: try enc.encode(updated))
+            response.headers.contentType = .json
+            let encoder = JSONEncoder()
+            encoder.dateEncodingStrategy = .iso8601
+            response.body = .init(data: try encoder.encode(updated))
         } catch {
             return req.eventLoop.makeSucceededFuture(FaultInjectionMiddleware.errorResponse(req: req, status: .internalServerError, code: "SERVER_ERROR", message: "encoding failed"))
         }
-        return req.eventLoop.makeSucceededFuture(res)
+        return req.eventLoop.makeSucceededFuture(response)
     }
 }
